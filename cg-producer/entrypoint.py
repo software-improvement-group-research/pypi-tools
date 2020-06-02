@@ -5,7 +5,8 @@ import shutil
 import argparse
 import datetime
 import subprocess as sp
-
+import lizard
+import json
 from pathlib import Path
 
 from kafka import KafkaConsumer, KafkaProducer
@@ -58,6 +59,7 @@ class CallGraphGenerator:
             comp = self._download()
             package = self._decompress(comp)
             cg_path = self._generate_callgraph(package)
+            self._analyse_code(package)
             self._produce_callgraph(cg_path)
             self._unlink_callgraph(cg_path)
         except CallGraphGeneratorError:
@@ -150,6 +152,19 @@ class CallGraphGenerator:
             raise CallGraphGeneratorError()
 
         return items[0]
+
+    def _analyse_code(self, package_path):
+        try:
+            i = lizard.analyze(package_path)
+
+            """
+            TODO: add other metadata (tools used, created_at, ...) to 'self.out_file_quality'
+                    and if needed, write metadata into package/file/method level
+            """
+        except Exception as e:
+            self._format_error('quality', str(e))
+            raise CallGraphGeneratorError()
+        self.producer.send(self.out_topic, json.dumps(i.__dict__))
 
     def _generate_callgraph(self, package_path):
         # call pycg using `package`
