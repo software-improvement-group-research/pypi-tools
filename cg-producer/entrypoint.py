@@ -164,7 +164,8 @@ class CallGraphGenerator:
         except Exception as e:
             self._format_error('quality', str(e))
             raise CallGraphGeneratorError()
-        self.producer.send(self.out_topic, json.dumps(i.__dict__))
+        for r in i:
+            self.producer.send(self.out_topic, json.dumps(r.__dict__.__str__()))
 
     def _generate_callgraph(self, package_path):
         # call pycg using `package`
